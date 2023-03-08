@@ -6,8 +6,8 @@ import timeit
 
 spentTime = 0
 
-class uniGraph : 
-    #looseEdges = []
+class UniGraph : 
+    
     def __init__(self, edges = [], vertexNo = 0, looseEdgesData = [], studentsData = {}, deliveryPriority = [], startNode = 0) :
         self.edges = edges
         self.vertexNo = vertexNo
@@ -94,8 +94,35 @@ class uniGraph :
         self.showDeliveryPriority()
 
 
+class NPD : 
+
+    def __init__(self, uniGraph, studentsMet = set(), pathTraversed = [], totalStepsTaken = 0, timeSpentOnLooseEdges = 0) :
+        self.uniGraph = uniGraph
+        self.studentsMet = studentsMet
+        self.pathTraversed = pathTraversed
+        self.totalStepsTaken = totalStepsTaken
+        self.timeSpentOnLooseEdges = timeSpentOnLooseEdges
+
+    def __eq__(self, other) :
+        if other == None :
+            return False
+        return (self.timeSpentOnLooseEdges, self.uniGraph.startNode, self.uniGraph.studentsData, self.studentsMet) ==\
+               (other.timeSpentOnLooseEdges, other.uniGraph.startNode, other.uniGraph.studentsData, other.studentsMet)
+
+    def __lt__(self, other) :
+        return self.totalStepsTaken < other.totalStepsTaken
+
+    def goalReached(self) :
+        if(len(self.studentsMet) != len(self.uniGraph.studentsData.keys())) :
+            return False
+        if(self.uniGraph.startNode not in self.uniGraph.studentsData.keys()) :
+            return False
+        return True
+
+
+
 start = timeit.default_timer()
-uniGraph_ = uniGraph()
+uniGraph_ = UniGraph()
 uniGraph_.retrieveGraphData("tests\\Test3.txt")
 end = timeit.default_timer()
 elapsedTime = end-start
