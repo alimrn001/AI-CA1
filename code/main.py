@@ -56,7 +56,7 @@ class UniGraph :
         s = int(fileData.readline())
         for k in range(s) :
             p, q = map(int, fileData.readline().split())
-            self.studentsData[p] = q ## p-1 , q-1 ???
+            self.studentsData[p-1] = [q-1, False] ## p-1 , q-1 ???
 
         t = int(fileData.readline())
         for l in range(t) :
@@ -93,6 +93,15 @@ class UniGraph :
         print("\nDelivery priority : ")
         self.showDeliveryPriority()
 
+    def getPizzaFromNode(self, node) : # check delivery priority here ?
+        for i in self.studentsData.keys() :
+            if(self.studentsData[i][0]==node) :
+                self.studentsData[i][1] = True
+
+    def pizzaIsBoughtForStudent(self, node) : # check delivery priority here ??
+        if(node in self.studentsData.keys()) :
+            return self.studentsData[node][1] 
+        return False
 
 class NPD : 
 
@@ -119,15 +128,140 @@ class NPD :
             return False
         return True
 
+    def createNPDNewDelivery(self, currentNode) :
+        newDeliveryGraph = copy.deepcopy(self.uniGraph)
+        newDeliveryGraph.startNode = currentNode
+        newDeliveryGraph.getPizzaFromNode(currentNode)
+        newDeliveryGraphStudentsMet = copy.deepcopy(self.studentsMet)
+
+        if(newDeliveryGraph.pizzaIsBoughtForStudent(currentNode)) : # check delivery priority here ??
+            newDeliveryGraphStudentsMet.add(currentNode)
+
+        NPDNewPathTraversed = copy.deepcopy(self.pathTraversed)
+        NPDNewPathTraversed.append(currentNode+1)
+        
+        return NPD(uniGraph = newDeliveryGraph, studentsMet = newDeliveryGraphStudentsMet,\
+                    pathTraversed = NPDNewPathTraversed, timeSpentOnLooseEdges=self.timeSpentOnLooseEdges,\
+                    totalStepsTaken = self.totalStepsTaken+1)
+
+    def getNewNPDDelivery(self) :
+        newDeliveries =[] 
+        v = self.uniGraph.startNode
+
+        if v in self.uniGraph.looseEdgesData : ## possible bug here !!!!!!!
+            for i in range(self.uniGraph.vertexNo) :
+                if(self.uniGraph.looseEdgesData[i][v] > self.timeSpentOnLooseEdges) :
+                    newDelivery = copy.deepcopy(self)
+                    newDelivery.totalStepsTaken += 1
+                    newDelivery.timeSpentOnLooseEdges += 1
+                    return [newDelivery]
+
+                self.timeSpentOnLooseEdges = 0
+
+        for n in self.uniGraph.edges[v] :
+            newDeliveries.append(self.createNPDNewDelivery(n)) 
+
+        return newDeliveries   
 
 
-start = timeit.default_timer()
+
+def BFS(init_state) :
+    frontier, visited, visit_states = [], [], 0
+    frontier.append(copy.deepcopy(init_state))
+
+    while  len(frontier) > 0 :
+
+        # for frt in frontier :
+        #     print(" frt start node :", frt.uniGraph.startNode)
+
+        # print("---")
+
+        current_state = frontier.pop(0)
+        visit_states += 1
+        #print("current state :", current_state.uniGraph.startNode)
+
+        if current_state.goalReached() :
+            path, cost_of_path = current_state.pathTraversed, current_state.totalStepsTaken
+            return path, cost_of_path, visit_states
+
+        visited.append(current_state)  
+
+        # for vst in visited :
+        #     print("start node", vst.uniGraph.startNode)
+        # print("----")
+
+        new_states = current_state.getNewNPDDelivery()
+        # print("new state :")
+        # for st in new_states :
+        #     print("start node", st.uniGraph.startNode)
+        
+        
+        for s in new_states :
+            if (s not in visited) and (s not in frontier)  :
+                frontier.append(s)
+                print("appended", s.uniGraph.startNode)
+        print("--")        
+
+    return None, None, visit_states
+
+
+
+
+
+
+# def set_morids(input_file_name):
+#         input_file = open(input_file_name)
+#         s = int(input_file.readline())
+#         dis = {}
+#         for i in range(s):
+#             line = list(map(int, input_file.readline().split()))
+#             dis[line[0]-1] = list(map(lambda x : x-1 , line[2:]))
+#             for j in range(len(dis[line[0]-1])):
+#                 dis[line[0]-1][j] = [dis[line[0]-1][j], False]
+#         morids = dis
+#         return morids
+
+# x = set_morids("testx.txt")
+# print(x)
+
+
 uniGraph_ = UniGraph()
-uniGraph_.retrieveGraphData("tests\\Test3.txt")
-end = timeit.default_timer()
-elapsedTime = end-start
-elapsedTime = elapsedTime*1000
-print('total time taken :', elapsedTime, 'miliseconds')
+uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\testx.txt")
 
 
-uniGraph_.showGraphData()
+initial_state = NPD(uniGraph=uniGraph_, pathTraversed = [uniGraph_.startNode+1])
+
+ExecutionTimeList = []
+for i in range(3) :
+    start = time.time()
+    ###### CHOOSE ALGORITHM ######
+
+    path, cost_of_path, visit_states = BFS(initial_state)
+    # path, cost_of_path, visit_states = IDS(initial_state)
+    # path, cost_of_path, visit_states = Astar(initial_state)
+    # path, cost_of_path, visit_states = Astar(initial_state, alpha=1.6)
+    # path, cost_of_path, visit_states = Astar(initial_state, alpha=7)
+
+    end = time.time()
+    ExecutionTimeList.append(end - start)
+
+print(f"Path : {path}\nCost Of Path : {cost_of_path}\
+        \nExecution Time : {sum(ExecutionTimeList)/3}\nSeen States : {visit_states}")
+
+
+
+
+
+
+
+
+# start = timeit.default_timer()
+# uniGraph_ = UniGraph()
+# uniGraph_.retrieveGraphData("tests/Test3.txt")
+# end = timeit.default_timer()
+# elapsedTime = end-start
+# elapsedTime = elapsedTime*1000
+# print('total time taken :', elapsedTime, 'miliseconds')
+
+
+# uniGraph_.showGraphData()
