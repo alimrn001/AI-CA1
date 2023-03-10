@@ -10,17 +10,18 @@ currentUserPizza = -1
 
 class UniGraph : 
     
-    def __init__(self, edges = [], vertexNo = 0, looseEdgesData = [], studentsData = {}, deliveryPriority = [], startNode = 0) :
+    def __init__(self, edges = [], vertexNo = 0, looseEdgesData = [], studentsData = {}, deliveryPriority = [], pizzerias = [], startNode = 0) :
         self.edges = edges
         self.vertexNo = vertexNo
         self.looseEdgesData = looseEdgesData
         self.studentsData = studentsData
         self.deliveryPriority = deliveryPriority
+        self.pizzerias = pizzerias
         self.startNode = startNode
 
     def __eq__(self, other) : 
-        return (self.edges, self.vertexNo, self.looseEdgesData, self.studentsData, self.deliveryPriority, self.startNode) == \
-        (other.edges, other.vertexNo, other.looseEdgesData, other.studentsData, other.deliveryPriority, other.startNode)
+        return (self.edges, self.vertexNo, self.looseEdgesData, self.studentsData, self.deliveryPriority, self.pizzerias, self.startNode) == \
+        (other.edges, other.vertexNo, other.looseEdgesData, other.studentsData, other.deliveryPriority, other.pizzerias, other.startNode)
 
     def initializeEdges(self, n) :
         #n is vertex no.
@@ -59,11 +60,14 @@ class UniGraph :
         for k in range(s) :
             p, q = map(int, fileData.readline().split())
             self.studentsData[p-1] = [q-1, False] ## p-1 , q-1 ???
+            self.pizzerias.append(q-1)
 
         t = int(fileData.readline())
         for l in range(t) :
             a, b = map(int, fileData.readline().split())
-            self.deliveryPriority[a-1].append(b-1) ## a-1 , b-1 ???
+            std1, pizz1 = map(int, linecache.getline(fileName, a+m+1+h+1+1+1).split())
+            std2, pizz2 = map(int, linecache.getline(fileName, b+m+1+h+1+1+1).split())
+            self.deliveryPriority[std1-1].append(std2-1) ## a-1 , b-1 ???
 
     def showLooseEdges(self) :
         print("loose edges are : ")
@@ -156,14 +160,17 @@ class NPDState :
                 pizzasTakenNewState.clear()
 
         else : # its a pizzeria
-            pizzaAlreadyDelivered = False
-            for m in self.graph.studentsData.keys() :
-                if(self.graph.studentsData[m][0] == currentNode) :
-                    if(m in self.studentsRecieved) :
-                        pizzaAlreadyDelivered = True
+            if(currentNode in self.graph.pizzerias) :
 
-            if(currentNode not in pizzasTakenNewState and (pizzaAlreadyDelivered==False)) :
-                pizzasTakenNewState.append(currentNode)
+                pizzaAlreadyDelivered = False
+                for m in self.graph.studentsData.keys() :
+                    if(self.graph.studentsData[m][0] == currentNode) :
+                        if(m in self.studentsRecieved) :
+                            pizzaAlreadyDelivered = True
+
+                if(currentNode not in pizzasTakenNewState and (pizzaAlreadyDelivered==False)) :
+                    pizzasTakenNewState.append(currentNode)
+
 
         newStatePathTraversed = copy.deepcopy(self.path)
         newStatePathTraversed.append(currentNode+1)
