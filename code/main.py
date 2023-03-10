@@ -6,6 +6,8 @@ import timeit
 
 spentTime = 0
 
+currentUserPizza = -1
+
 class UniGraph : 
     
     def __init__(self, edges = [], vertexNo = 0, looseEdgesData = [], studentsData = {}, deliveryPriority = [], startNode = 0) :
@@ -96,73 +98,88 @@ class UniGraph :
     def getPizzaFromNode(self, node) : # check delivery priority here ?
         for i in self.studentsData.keys() :
             if(self.studentsData[i][0]==node) :
-                self.studentsData[i][1] = True
+                currentUserPizza = i
 
     def pizzaIsBoughtForStudent(self, node) : # check delivery priority here ??
-        if(node in self.studentsData.keys()) :
-            return self.studentsData[node][1] 
+        if(node == currentUserPizza) :
+            self.studentsData[node][1]=True
+            return True
         return False
 
-class NPD : 
 
-    def __init__(self, uniGraph, studentsMet = set(), pathTraversed = [], totalStepsTaken = 0, timeSpentOnLooseEdges = 0) :
-        self.uniGraph = uniGraph
-        self.studentsMet = studentsMet
-        self.pathTraversed = pathTraversed
-        self.totalStepsTaken = totalStepsTaken
-        self.timeSpentOnLooseEdges = timeSpentOnLooseEdges
+class NPDState :
+
+    def __init__(self, graph, studentsRecieved = set(), path = [], pizzasTaken = [], steps = 0, looseEdgeSpentTime = 0) :
+        self.graph = graph
+        self.studentsRecieved = studentsRecieved
+        self.path = path
+        self.pizzasTaken = pizzasTaken
+        self.steps = steps
+        self.looseEdgeSpentTime = looseEdgeSpentTime
 
     def __eq__(self, other) :
-        if other == None :
+        if(other == None) :
             return False
-        return (self.timeSpentOnLooseEdges, self.uniGraph.startNode, self.uniGraph.studentsData, self.studentsMet) ==\
-               (other.timeSpentOnLooseEdges, other.uniGraph.startNode, other.uniGraph.studentsData, other.studentsMet)
+        return (self.graph.startNode, self.studentsRecieved, self.pizzasTaken, self.looseEdgeSpentTime) == \
+               (other.graph.startNode, other.studentsRecieved, other.pizzasTaken, other.looseEdgeSpentTime) #check tha last one and also graph.studentsData
 
     def __lt__(self, other) :
-        return self.totalStepsTaken < other.totalStepsTaken
+        return self.steps < other.steps
 
-    def goalReached(self) :
-        if(len(self.studentsMet) != len(self.uniGraph.studentsData.keys())) :
+    def isGoal(self) :
+        if(len(self.studentsRecieved) != len(self.graph.studentsData.keys())) : # not all students have recieved pizza
             return False
-        if(self.uniGraph.startNode not in self.uniGraph.studentsData.keys()) :
+        if(self.graph.startNode not in self.graph.studentsData.keys()) : # our current node is not a student
             return False
-        return True
+        return True # all students have recieved pizza and our current node is a student which is the last student recieving pizza
 
-    def createNPDNewDelivery(self, currentNode) :
-        newDeliveryGraph = copy.deepcopy(self.uniGraph)
-        newDeliveryGraph.startNode = currentNode
-        newDeliveryGraph.getPizzaFromNode(currentNode)
-        newDeliveryGraphStudentsMet = copy.deepcopy(self.studentsMet)
+    def createNewNPDState(self, currentNode) :
+        newNPDStateGraph = copy.deepcopy(self.graph)
+        newNPDStateGraph.startNode = currentNode
+        pizzasTakenNewState = copy.deepcopy(self.pizzasTaken)
+        studentsRecievedPizzaNewState = copy.deepcopy(self.studentsRecieved)
 
-        if(newDeliveryGraph.pizzaIsBoughtForStudent(currentNode)) : # check delivery priority here ??
-            newDeliveryGraphStudentsMet.add(currentNode)
+        if((currentNode in self.graph.studentsData.keys()) and (currentNode not in self.studentsRecieved)) : #if cuurent node is student and has not recieved pizza yet check pizza delivery and priority
+            priorityIsOk = True
+            studentPizzaIsBought = False
+            if(self.graph.studentsData[currentNode][0] in self.pizzasTaken) :
+                studentPizzaIsBought = True
 
-        NPDNewPathTraversed = copy.deepcopy(self.pathTraversed)
-        NPDNewPathTraversed.append(currentNode+1)
+            if(studentPizzaIsBought) :
+                for i in range(self.graph.vertexNo) :
+                    if(currentNode in self.graph.deliveryPriority[i]) :
+                        if(i not in self.studentsRecieved) :
+                            priorityIsOk = False
+
+            if(priorityIsOk and studentPizzaIsBought) : # we can deliver pizza to student
+                studentsRecievedPizzaNewState.add(currentNode)
+                pizzasTakenNewState.clear()
+
+        else : # its a pizzeria
+            pizzaAlreadyDelivered = False
+            for m in self.graph.studentsData.keys() :
+                if(self.graph.studentsData[m][0] == currentNode) :
+                    if(m in self.studentsRecieved) :
+                        pizzaAlreadyDelivered = True
+
+            if(currentNode not in pizzasTakenNewState and (pizzaAlreadyDelivered==False)) :
+                pizzasTakenNewState.append(currentNode)
+
+        newStatePathTraversed = copy.deepcopy(self.path)
+        newStatePathTraversed.append(currentNode+1)
+
+        return NPDState(graph=newNPDStateGraph, studentsRecieved=studentsRecievedPizzaNewState, path=newStatePathTraversed, pizzasTaken=pizzasTakenNewState, steps=self.steps+1, looseEdgeSpentTime=self.looseEdgeSpentTime)
+
+    def getNewNPDStates(self) :
+        newStates = []
+        v = self.graph.startNode
         
-        return NPD(uniGraph = newDeliveryGraph, studentsMet = newDeliveryGraphStudentsMet,\
-                    pathTraversed = NPDNewPathTraversed, timeSpentOnLooseEdges=self.timeSpentOnLooseEdges,\
-                    totalStepsTaken = self.totalStepsTaken+1)
+        #check loose edges here !
 
-    def getNewNPDDelivery(self) :
-        newDeliveries =[] 
-        v = self.uniGraph.startNode
+        for node in self.graph.edges[v] :
+            newStates.append(self.createNewNPDState(node)) 
 
-        if v in self.uniGraph.looseEdgesData : ## possible bug here !!!!!!!
-            for i in range(self.uniGraph.vertexNo) :
-                if(self.uniGraph.looseEdgesData[i][v] > self.timeSpentOnLooseEdges) :
-                    newDelivery = copy.deepcopy(self)
-                    newDelivery.totalStepsTaken += 1
-                    newDelivery.timeSpentOnLooseEdges += 1
-                    return [newDelivery]
-
-                self.timeSpentOnLooseEdges = 0
-
-        for n in self.uniGraph.edges[v] :
-            newDeliveries.append(self.createNPDNewDelivery(n)) 
-
-        return newDeliveries   
-
+        return newStates   
 
 
 def BFS(init_state) :
@@ -171,65 +188,31 @@ def BFS(init_state) :
 
     while  len(frontier) > 0 :
 
-        # for frt in frontier :
-        #     print(" frt start node :", frt.uniGraph.startNode)
-
-        # print("---")
-
         current_state = frontier.pop(0)
         visit_states += 1
-        #print("current state :", current_state.uniGraph.startNode)
 
-        if current_state.goalReached() :
-            path, cost_of_path = current_state.pathTraversed, current_state.totalStepsTaken
+        if current_state.isGoal() :
+            path, cost_of_path = current_state.path, current_state.steps
             return path, cost_of_path, visit_states
 
         visited.append(current_state)  
+        new_states = current_state.getNewNPDStates()
 
-        # for vst in visited :
-        #     print("start node", vst.uniGraph.startNode)
-        # print("----")
-
-        new_states = current_state.getNewNPDDelivery()
-        # print("new state :")
-        # for st in new_states :
-        #     print("start node", st.uniGraph.startNode)
-        
-        
         for s in new_states :
             if (s not in visited) and (s not in frontier)  :
                 frontier.append(s)
-                print("appended", s.uniGraph.startNode)
-        print("--")        
+        #         print("appended", s.graph.startNode)
+        # print("--")        
 
     return None, None, visit_states
-
-
-
-
-
-
-# def set_morids(input_file_name):
-#         input_file = open(input_file_name)
-#         s = int(input_file.readline())
-#         dis = {}
-#         for i in range(s):
-#             line = list(map(int, input_file.readline().split()))
-#             dis[line[0]-1] = list(map(lambda x : x-1 , line[2:]))
-#             for j in range(len(dis[line[0]-1])):
-#                 dis[line[0]-1][j] = [dis[line[0]-1][j], False]
-#         morids = dis
-#         return morids
-
-# x = set_morids("testx.txt")
-# print(x)
 
 
 uniGraph_ = UniGraph()
 uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\testx.txt")
 
 
-initial_state = NPD(uniGraph=uniGraph_, pathTraversed = [uniGraph_.startNode+1])
+initial_state = NPDState(graph=uniGraph_, path=[uniGraph_.startNode+1])
+# NPD(uniGraph=uniGraph_, pathTraversed = [uniGraph_.startNode+1])
 
 ExecutionTimeList = []
 for i in range(3) :
@@ -247,21 +230,3 @@ for i in range(3) :
 
 print(f"Path : {path}\nCost Of Path : {cost_of_path}\
         \nExecution Time : {sum(ExecutionTimeList)/3}\nSeen States : {visit_states}")
-
-
-
-
-
-
-
-
-# start = timeit.default_timer()
-# uniGraph_ = UniGraph()
-# uniGraph_.retrieveGraphData("tests/Test3.txt")
-# end = timeit.default_timer()
-# elapsedTime = end-start
-# elapsedTime = elapsedTime*1000
-# print('total time taken :', elapsedTime, 'miliseconds')
-
-
-# uniGraph_.showGraphData()
