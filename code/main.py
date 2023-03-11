@@ -113,19 +113,19 @@ class UniGraph :
 
 class NPDState :
 
-    def __init__(self, graph, studentsRecieved = set(), path = [], pizzasTaken = [], steps = 0, looseEdgeSpentTime = 0) :
+    def __init__(self, graph, studentsRecieved = set(), path = [], pizzaTaken = -1, steps = 0, looseEdgeSpentTime = 0) :
         self.graph = graph
         self.studentsRecieved = studentsRecieved
         self.path = path
-        self.pizzasTaken = pizzasTaken
+        self.pizzaTaken = pizzaTaken
         self.steps = steps
         self.looseEdgeSpentTime = looseEdgeSpentTime
 
     def __eq__(self, other) :
         if(other == None) :
             return False
-        return (self.graph.startNode, self.studentsRecieved, self.pizzasTaken, self.looseEdgeSpentTime) == \
-               (other.graph.startNode, other.studentsRecieved, other.pizzasTaken, other.looseEdgeSpentTime) #check tha last one and also graph.studentsData
+        return (self.graph.startNode, self.studentsRecieved, self.pizzaTaken, self.looseEdgeSpentTime) == \
+               (other.graph.startNode, other.studentsRecieved, other.pizzaTaken, other.looseEdgeSpentTime) #check tha last one and also graph.studentsData
 
     def __lt__(self, other) :
         return self.steps < other.steps
@@ -138,45 +138,92 @@ class NPDState :
         return True # all students have recieved pizza and our current node is a student which is the last student recieving pizza
 
     def createNewNPDState(self, currentNode) :
-        newNPDStateGraph = copy.deepcopy(self.graph)
-        newNPDStateGraph.startNode = currentNode
-        pizzasTakenNewState = copy.deepcopy(self.pizzasTaken)
-        studentsRecievedPizzaNewState = copy.deepcopy(self.studentsRecieved)
 
-        if((currentNode in self.graph.studentsData.keys()) and (currentNode not in self.studentsRecieved)) : #if cuurent node is student and has not recieved pizza yet check pizza delivery and priority
-            priorityIsOk = True
-            studentPizzaIsBought = False
-            if(self.graph.studentsData[currentNode][0] in self.pizzasTaken) :
-                studentPizzaIsBought = True
+        newState1 = copy.deepcopy(self)
+        newState1.graph.startNode = currentNode
 
-            if(studentPizzaIsBought) :
-                for i in range(self.graph.vertexNo) :
-                    if(currentNode in self.graph.deliveryPriority[i]) :
-                        if(i not in self.studentsRecieved) :
-                            priorityIsOk = False
-
-            if(priorityIsOk and studentPizzaIsBought) : # we can deliver pizza to student
-                studentsRecievedPizzaNewState.add(currentNode)
-                pizzasTakenNewState.clear()
-
-        else : # its a pizzeria
-            if(currentNode in self.graph.pizzerias) :
-
+        if(currentNode in self.graph.pizzerias) : #current node is pizza and you're not currently carrying another pizza
+            if(self.pizzaTaken == -1) :
                 pizzaAlreadyDelivered = False
                 for m in self.graph.studentsData.keys() :
                     if(self.graph.studentsData[m][0] == currentNode) :
                         if(m in self.studentsRecieved) :
                             pizzaAlreadyDelivered = True
 
-                if(currentNode not in pizzasTakenNewState and (pizzaAlreadyDelivered==False)) :
-                    pizzasTakenNewState.append(currentNode)
+                newState2 = copy.deepcopy(newState1)
+                newState1.pizzaTaken = currentNode
+                newState1.path.append(currentNode+1)
+                newState2.path.append(currentNode+1)
+                newState1.steps+=1
+                newState2.steps+=1
+                return [newState1, newState2]
+
+            else :
+                newState1.path.append(currentNode+1)
+                newState1.steps+=1
+                return[newState1]
+
+        elif(currentNode in self.graph.studentsData.keys() and (currentNode not in self.studentsRecieved)) :
+            priorityIsOk = True
+            studentPizzaIsBought = False
+            if(self.graph.studentsData[currentNode][0] == self.pizzaTaken) :
+                studentPizzaIsBought= True
+            
+            if(studentPizzaIsBought) :
+                for i in range(self.graph.vertexNo) :
+                    if(currentNode in self.graph.deliveryPriority[i]) :
+                        if(i not in self.studentsRecieved) :
+                            priorityIsOk = False
+            
+            if(priorityIsOk and studentPizzaIsBought) :
+                newState1.studentsRecieved.add(currentNode)
+                newState1.pizzaTaken = -1
+                newState1.path.append(currentNode+1)
+                newState1.steps += 1
+                return [newState1]  
+
+            newState1.path.append(currentNode+1)
+            newState1.steps += 1
+            return [newState1]
+
+        newState1.path.append(currentNode)
+        newState1.steps+=1
+        return [newState1]
 
 
-        newStatePathTraversed = copy.deepcopy(self.path)
-        newStatePathTraversed.append(currentNode+1)
+        # if((currentNode in self.graph.studentsData.keys()) and (currentNode not in self.studentsRecieved)) : #if cuurent node is student and has not recieved pizza yet check pizza delivery and priority
+        #     priorityIsOk = True
+        #     studentPizzaIsBought = False
+        #     if(self.graph.studentsData[currentNode][0] in self.pizzasTaken) :
+        #         studentPizzaIsBought = True
 
-        return NPDState(graph=newNPDStateGraph, studentsRecieved=studentsRecievedPizzaNewState, path=newStatePathTraversed, pizzasTaken=pizzasTakenNewState, steps=self.steps+1, looseEdgeSpentTime=self.looseEdgeSpentTime)
+        #     if(studentPizzaIsBought) :
+        #         for i in range(self.graph.vertexNo) :
+        #             if(currentNode in self.graph.deliveryPriority[i]) :
+        #                 if(i not in self.studentsRecieved) :
+        #                     priorityIsOk = False
 
+        #     if(priorityIsOk and studentPizzaIsBought) : # we can deliver pizza to student
+        #         newState.studentsRecieved.add(currentNode)
+        #         newState.pizzasTaken.clear()
+        
+        # else : # its a pizzeria
+        #     if(currentNode in self.graph.pizzerias) :
+
+        #         pizzaAlreadyDelivered = False
+        #         for m in self.graph.studentsData.keys() :
+        #             if(self.graph.studentsData[m][0] == currentNode) :
+        #                 if(m in self.studentsRecieved) :
+        #                     pizzaAlreadyDelivered = True
+
+        #         if(currentNode not in newState.pizzasTaken and (pizzaAlreadyDelivered==False)) :
+        #             newState.pizzasTaken.append(currentNode)
+        
+
+        # newState.path.append(currentNode+1)
+        # newState.steps+=1
+        # return newState
+        
     def getNewNPDStates(self) :
         newStates = []
         v = self.graph.startNode
@@ -184,7 +231,10 @@ class NPDState :
         #check loose edges here !
 
         for node in self.graph.edges[v] :
-            newStates.append(self.createNewNPDState(node)) 
+            s = self.createNewNPDState(node)
+            for stateItem in s :
+                newStates.append(stateItem)
+            #newStates.append(self.createNewNPDState(node)) 
 
         return newStates   
 
@@ -215,7 +265,7 @@ def BFS(init_state) :
 
 
 uniGraph_ = UniGraph()
-uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\testx.txt")
+uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\tests\\Test1.txt")
 
 
 initial_state = NPDState(graph=uniGraph_, path=[uniGraph_.startNode+1])
