@@ -10,23 +10,25 @@ currentUserPizza = -1
 
 class UniGraph : 
     
-    def __init__(self, edges = [], vertexNo = 0, looseEdgesData = [], studentsData = {}, deliveryPriority = [], pizzerias = [], startNode = 0) :
+    def __init__(self, edges = [], vertexNo = 0, looseEdgesData = [], looseEdgesCrossStatus = [], studentsData = {}, deliveryPriority = [], pizzerias = [], startNode = 0) :
         self.edges = edges
         self.vertexNo = vertexNo
         self.looseEdgesData = looseEdgesData
+        self.looseEdgesCrossStatus = looseEdgesCrossStatus
         self.studentsData = studentsData
         self.deliveryPriority = deliveryPriority
         self.pizzerias = pizzerias
         self.startNode = startNode
 
     def __eq__(self, other) : 
-        return (self.edges, self.vertexNo, self.looseEdgesData, self.studentsData, self.deliveryPriority, self.pizzerias, self.startNode) == \
-        (other.edges, other.vertexNo, other.looseEdgesData, other.studentsData, other.deliveryPriority, other.pizzerias, other.startNode)
+        return (self.edges, self.vertexNo, self.looseEdgesData, self.looseEdgesCrossStatus, self.studentsData, self.deliveryPriority, self.pizzerias, self.startNode) == \
+        (other.edges, other.vertexNo, other.looseEdgesData, self.looseEdgesCrossStatus, other.studentsData, other.deliveryPriority, other.pizzerias, other.startNode)
 
     def initializeEdges(self, n) :
         #n is vertex no.
         self.edges = [ [] for i in range(n)]
         self.looseEdgesData = [ [0]*n for j in range(n)] # fill all elements to 0
+        self.looseEdgesCrossStatus = [ [-1]*n for j in range(n)] # fill all elements to -1
         self.deliveryPriority = [ [] for k in range(n)]
 
     def addEdge(self, u, v) :
@@ -35,7 +37,7 @@ class UniGraph :
         self.edges[v-1].append(u-1)
 
     def edgeIsLoose(self, src, dst) :
-        if(self.looseEdgesData[src-1][dst-1]==0) :
+        if(self.looseEdgesData[src][dst]==0) :
             return False
         return True
 
@@ -54,6 +56,8 @@ class UniGraph :
             src, dst = map(int, linecache.getline(fileName, edgeNo+1).split())
             self.looseEdgesData[src-1][dst-1] = edgeTime
             self.looseEdgesData[dst-1][src-1] = edgeTime
+            self.looseEdgesCrossStatus[src-1][dst-1] = 0
+            self.looseEdgesCrossStatus[dst-1][src-1] = 0
 
         self.startNode = int(fileData.readline()) - 1
         s = int(fileData.readline())
@@ -78,6 +82,18 @@ class UniGraph :
                     #print("(", j+1, "->", i+1, ") : ", self.looseEdgesData[i][j])
                     #print("-------------------")
 
+    def looseEdgeIsCrossed(self, src, dst) :
+        if(self.looseEdgesCrossStatus[src][dst] == 1) :
+            return True
+        return False
+
+    def crossLooseEdge(self, src, dst) :
+        self.looseEdgesCrossStatus[src][dst] = 1
+        self.looseEdgesCrossStatus[dst][src] = 1
+
+    def getLooseEdgeTime(self, src, dst) :
+        return self.looseEdgesData[src][dst]
+
     def showDeliveryPriority(self) :
         for i in range(self.vertexNo) :
                 if(len(self.deliveryPriority[i])!= 0) :
@@ -98,17 +114,6 @@ class UniGraph :
         print(self.studentsData)
         print("\nDelivery priority : ")
         self.showDeliveryPriority()
-
-    def getPizzaFromNode(self, node) : # check delivery priority here ?
-        for i in self.studentsData.keys() :
-            if(self.studentsData[i][0]==node) :
-                currentUserPizza = i
-
-    def pizzaIsBoughtForStudent(self, node) : # check delivery priority here ??
-        if(node == currentUserPizza) :
-            self.studentsData[node][1]=True
-            return True
-        return False
 
 
 class NPDState :
@@ -186,56 +191,17 @@ class NPDState :
             newState1.steps += 1
             return [newState1]
 
-        newState1.path.append(currentNode)
+        newState1.path.append(currentNode+1)
         newState1.steps+=1
         return [newState1]
 
-
-        # if((currentNode in self.graph.studentsData.keys()) and (currentNode not in self.studentsRecieved)) : #if cuurent node is student and has not recieved pizza yet check pizza delivery and priority
-        #     priorityIsOk = True
-        #     studentPizzaIsBought = False
-        #     if(self.graph.studentsData[currentNode][0] in self.pizzasTaken) :
-        #         studentPizzaIsBought = True
-
-        #     if(studentPizzaIsBought) :
-        #         for i in range(self.graph.vertexNo) :
-        #             if(currentNode in self.graph.deliveryPriority[i]) :
-        #                 if(i not in self.studentsRecieved) :
-        #                     priorityIsOk = False
-
-        #     if(priorityIsOk and studentPizzaIsBought) : # we can deliver pizza to student
-        #         newState.studentsRecieved.add(currentNode)
-        #         newState.pizzasTaken.clear()
-        
-        # else : # its a pizzeria
-        #     if(currentNode in self.graph.pizzerias) :
-
-        #         pizzaAlreadyDelivered = False
-        #         for m in self.graph.studentsData.keys() :
-        #             if(self.graph.studentsData[m][0] == currentNode) :
-        #                 if(m in self.studentsRecieved) :
-        #                     pizzaAlreadyDelivered = True
-
-        #         if(currentNode not in newState.pizzasTaken and (pizzaAlreadyDelivered==False)) :
-        #             newState.pizzasTaken.append(currentNode)
-        
-
-        # newState.path.append(currentNode+1)
-        # newState.steps+=1
-        # return newState
-        
     def getNewNPDStates(self) :
         newStates = []
         v = self.graph.startNode
-        
-        #check loose edges here !
-
-        for node in self.graph.edges[v] :
-            s = self.createNewNPDState(node)
+        for n in self.graph.edges[v] :
+            s = self.createNewNPDState(n)
             for stateItem in s :
                 newStates.append(stateItem)
-            #newStates.append(self.createNewNPDState(node)) 
-
         return newStates   
 
 
@@ -265,7 +231,7 @@ def BFS(init_state) :
 
 
 uniGraph_ = UniGraph()
-uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\tests\\Test1.txt")
+uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\test5.txt")
 
 
 initial_state = NPDState(graph=uniGraph_, path=[uniGraph_.startNode+1])
