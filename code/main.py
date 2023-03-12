@@ -229,21 +229,59 @@ def BFS(init_state) :
 
     return None, None, visit_states
 
+def DFS(init_state, depth) :
+    stack, visited, visit_states_num = [], [], 0
+    stack.append(copy.deepcopy(init_state))
+
+    while len(stack) > 0  :
+        cur_state = stack.pop()
+
+        if cur_state.isGoal() :
+            return cur_state.path, cur_state.steps, visit_states_num, True
+            
+        if (cur_state.steps >= depth ) or ((cur_state, cur_state.steps) in visited):
+            continue
+
+        visit_states_num += 1
+        visited.append((cur_state, cur_state.steps))
+
+        new_states = cur_state.getNewNPDStates()
+
+        for s in new_states :
+            if ( (s, s.steps) not in visited ) :
+                stack.append(s)
+
+    return None, None, visit_states_num, False
+
+def IDS(init_state) :
+    depth, total_visit_state = 1, 0
+    while True :
+        path, cost_of_path,visitStates, goalReached= DFS(copy.deepcopy(init_state), depth)
+        total_visit_state += visitStates
+        if goalReached :
+            break
+        depth += 1
+    
+    return path, cost_of_path, total_visit_state
+
+
+
 
 uniGraph_ = UniGraph()
-uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\test5.txt")
+uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\testx.txt")
 
 
 initial_state = NPDState(graph=uniGraph_, path=[uniGraph_.startNode+1])
 # NPD(uniGraph=uniGraph_, pathTraversed = [uniGraph_.startNode+1])
+executionNumbers = 1
 
 ExecutionTimeList = []
-for i in range(3) :
+for i in range(executionNumbers) :
     start = time.time()
     ###### CHOOSE ALGORITHM ######
 
-    path, cost_of_path, visit_states = BFS(initial_state)
-    # path, cost_of_path, visit_states = IDS(initial_state)
+    #path, cost_of_path, visit_states = BFS(initial_state)
+    path, cost_of_path, visit_states = IDS(initial_state)
     # path, cost_of_path, visit_states = Astar(initial_state)
     # path, cost_of_path, visit_states = Astar(initial_state, alpha=1.6)
     # path, cost_of_path, visit_states = Astar(initial_state, alpha=7)
@@ -252,4 +290,4 @@ for i in range(3) :
     ExecutionTimeList.append(end - start)
 
 print(f"Path : {path}\nCost Of Path : {cost_of_path}\
-        \nExecution Time : {sum(ExecutionTimeList)/3}\nSeen States : {visit_states}")
+        \nExecution Time : {sum(ExecutionTimeList)/executionNumbers}\nSeen States : {visit_states}")
