@@ -4,9 +4,10 @@ import heapq
 import linecache
 import timeit
 
-spentTime = 0
-
-currentUserPizza = -1
+BFSAlgorithm = 1
+IDSAlgorithm = 2
+ASTARAlgorithm = 3
+ASTARAlgorithmWeighted = 4
 
 class UniGraph : 
     
@@ -200,6 +201,13 @@ class NPDState :
         v = self.graph.startNode
         stateLooseEdgesStatus = []
 
+        # for n in self.graph.edges[v] :
+        #     s = self.createNewNPDState(n)
+        #     for stateItem in s :
+        #         newStates.append(stateItem)
+
+        # return newStates
+
         for n in self.graph.edges[v] :
             createNewStateAsNormal = True
 
@@ -231,6 +239,7 @@ class NPDState :
                 s = self.createNewNPDState(n)
                 for stateItem in s :
                     newStates.append(stateItem)
+        
         return newStates   
 
     def heuristic(self) :
@@ -261,9 +270,7 @@ def BFS(init_state) :
         for s in new_states :
             if (s not in visited) and (s not in frontier)  :
                 frontier.append(s)
-        #         print("appended", s.graph.startNode)
-        # print("--")        
-
+               
     return None, None, visit_states
 
 
@@ -326,26 +333,45 @@ def ASTAR(init_state, heuristicWeight=1) :
 
 
 
-uniGraph_ = UniGraph()
-uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\test5.txt")
+## execution config start
 
+testFileNo = 0 # from 0 to 5
+filePath = "E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\tests\\" + "Test" + str(testFileNo) + ".txt"
+numberOfExecutions = 3
+selectedAlgorithm = IDSAlgorithm
+heuristicWeight1 = 1.5
+heuristicWeight2 = 8
 
-initial_state = NPDState(graph=uniGraph_, path=[uniGraph_.startNode+1])
-executionNumbers = 1
+uniGraph = UniGraph()
+uniGraph.retrieveGraphData(filePath)
 
-ExecutionTimeList = []
-for i in range(executionNumbers) :
+## execution config end
+
+initial_state = NPDState(graph=uniGraph, path=[uniGraph.startNode+1])
+
+executionTimes = []
+for i in range(numberOfExecutions) :
+    
     start = time.time()
-    ###### CHOOSE ALGORITHM ######
 
-    path, cost_of_path, visit_states = BFS(initial_state)
-    #path, cost_of_path, visit_states = IDS(initial_state)
-    #path, cost_of_path, visit_states = ASTAR(initial_state)
-    #path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=1.6)
-    #path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=7)
+    if(selectedAlgorithm == BFSAlgorithm) :
+        path, cost_of_path, visit_states = BFS(initial_state)
+
+    elif(selectedAlgorithm == IDSAlgorithm) : 
+        path, cost_of_path, visit_states = IDS(initial_state)
+    
+    elif(selectedAlgorithm == ASTARAlgorithm) :
+        path, cost_of_path, visit_states = ASTAR(initial_state)
+    
+    elif(selectedAlgorithm == ASTARAlgorithmWeighted) :
+        path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=heuristicWeight1)
+        path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=heuristicWeight2)
+
+    else :
+        print("Wrong configuration!\n")
 
     end = time.time()
-    ExecutionTimeList.append(end - start)
+    executionTimes.append(end - start)
 
 print(f"Path : {path}\nCost Of Path : {cost_of_path}\
-        \nExecution Time : {sum(ExecutionTimeList)/executionNumbers}\nSeen States : {visit_states}")
+        \nExecution Time : {sum(executionTimes)/numberOfExecutions}\nSeen States : {visit_states}")
