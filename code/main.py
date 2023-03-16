@@ -198,10 +198,39 @@ class NPDState :
     def getNewNPDStates(self) :
         newStates = []
         v = self.graph.startNode
+        stateLooseEdgesStatus = []
+
         for n in self.graph.edges[v] :
-            s = self.createNewNPDState(n)
-            for stateItem in s :
-                newStates.append(stateItem)
+            createNewStateAsNormal = True
+
+            if(self.graph.edgeIsLoose(n, v)) :
+
+                if(self.graph.looseEdgeIsCrossed(n, v)==False) :
+                    createNewStateAsNormal=False
+                    states = self.createNewNPDState(n)
+                    for st in states :
+                        st.graph.crossLooseEdge(n, v)
+                        newStates.append(st)
+
+                else :
+                    if(self.graph.looseEdgesData[n][v] > self.looseEdgeSpentTime) :
+                        createNewStateAsNormal = False
+                        newState = copy.deepcopy(self)
+                        newState.steps+=1
+                        newState.path.append(v+1)
+                        newState.looseEdgeSpentTime += 1
+                        newStates.append(newState)
+                    else :
+                        createNewStateAsNormal = False
+                        states2 = self.createNewNPDState(n)
+                        for st2 in states2 :
+                            st2.looseEdgeSpentTime=0
+                            newStates.append(st2)
+
+            if(createNewStateAsNormal == True) :
+                s = self.createNewNPDState(n)
+                for stateItem in s :
+                    newStates.append(stateItem)
         return newStates   
 
     def heuristic(self) :
@@ -298,7 +327,7 @@ def ASTAR(init_state, heuristicWeight=1) :
 
 
 uniGraph_ = UniGraph()
-uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\tests\\Test3.txt")
+uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\test5.txt")
 
 
 initial_state = NPDState(graph=uniGraph_, path=[uniGraph_.startNode+1])
@@ -309,11 +338,11 @@ for i in range(executionNumbers) :
     start = time.time()
     ###### CHOOSE ALGORITHM ######
 
-    #path, cost_of_path, visit_states = BFS(initial_state)
+    path, cost_of_path, visit_states = BFS(initial_state)
     #path, cost_of_path, visit_states = IDS(initial_state)
     #path, cost_of_path, visit_states = ASTAR(initial_state)
     #path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=1.6)
-    path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=7)
+    #path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=7)
 
     end = time.time()
     ExecutionTimeList.append(end - start)
