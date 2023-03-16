@@ -204,6 +204,14 @@ class NPDState :
                 newStates.append(stateItem)
         return newStates   
 
+    def heuristic(self) :
+        pizzasNotDelivered = 0
+        for i in self.graph.studentsData.keys() :
+            if(i not in self.studentsRecieved) :
+                pizzasNotDelivered += 1
+
+        return pizzasNotDelivered
+
 
 def BFS(init_state) :
     frontier, visited, visit_states = [], [], 0
@@ -229,6 +237,7 @@ def BFS(init_state) :
 
     return None, None, visit_states
 
+
 def DFS(init_state, depth) :
     stack, visited, visit_states_num = [], [], 0
     stack.append(copy.deepcopy(init_state))
@@ -253,6 +262,7 @@ def DFS(init_state, depth) :
 
     return None, None, visit_states_num, False
 
+
 def IDS(init_state) :
     depth, total_visit_state = 1, 0
     while True :
@@ -265,14 +275,33 @@ def IDS(init_state) :
     return path, cost_of_path, total_visit_state
 
 
+def ASTAR(init_state, heuristicWeight=1) :
+    frontier, front_list, visited, visited_state = [ [init_state.heuristic()*heuristicWeight, init_state] ], [init_state], [], 0
+
+    while len(frontier) > 0 :
+        (h, cur_state) = heapq.heappop(frontier)
+
+        if cur_state.isGoal() :
+            return cur_state.path, cur_state.steps, visited_state
+
+        visited.append(cur_state)
+        visited_state += 1
+        new_states = cur_state.getNewNPDStates()
+
+        for s in new_states :
+            if (s not in visited) and (s not in front_list):
+                heapq.heappush(frontier, [s.steps + s.heuristic()*heuristicWeight, s] )
+                front_list.append(s)
+
+    return cur_state.path, cur_state.steps, visited_state
+
 
 
 uniGraph_ = UniGraph()
-uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\testx.txt")
+uniGraph_.retrieveGraphData("E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\tests\\Test3.txt")
 
 
 initial_state = NPDState(graph=uniGraph_, path=[uniGraph_.startNode+1])
-# NPD(uniGraph=uniGraph_, pathTraversed = [uniGraph_.startNode+1])
 executionNumbers = 1
 
 ExecutionTimeList = []
@@ -281,10 +310,10 @@ for i in range(executionNumbers) :
     ###### CHOOSE ALGORITHM ######
 
     #path, cost_of_path, visit_states = BFS(initial_state)
-    path, cost_of_path, visit_states = IDS(initial_state)
-    # path, cost_of_path, visit_states = Astar(initial_state)
-    # path, cost_of_path, visit_states = Astar(initial_state, alpha=1.6)
-    # path, cost_of_path, visit_states = Astar(initial_state, alpha=7)
+    #path, cost_of_path, visit_states = IDS(initial_state)
+    #path, cost_of_path, visit_states = ASTAR(initial_state)
+    #path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=1.6)
+    path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=7)
 
     end = time.time()
     ExecutionTimeList.append(end - start)
