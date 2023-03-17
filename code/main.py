@@ -338,7 +338,7 @@ def ASTAR(init_state, heuristicWeight=1) :
 testFileNo = 0 # from 0 to 5
 filePath = "E:\\university\\semester 8\\AI\\CA1\\AI-CA1\\code\\tests\\" + "Test" + str(testFileNo) + ".txt"
 numberOfExecutions = 3
-selectedAlgorithm = IDSAlgorithm
+selectedAlgorithm = BFSAlgorithm
 heuristicWeight1 = 1.5
 heuristicWeight2 = 8
 
@@ -365,7 +365,7 @@ for i in range(numberOfExecutions) :
     
     elif(selectedAlgorithm == ASTARAlgorithmWeighted) :
         path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=heuristicWeight1)
-        path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=heuristicWeight2)
+        #path, cost_of_path, visit_states = ASTAR(initial_state, heuristicWeight=heuristicWeight2)
 
     else :
         print("Wrong configuration!\n")
